@@ -3,7 +3,8 @@ import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// TODO: Add your own Firebase configuration from your Firebase console
+// TODO: Replace the following with your app's Firebase project configuration
+// For more information, see: https://firebase.google.com/docs/web/setup#available-libraries
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
   authDomain: "YOUR_AUTH_DOMAIN",
