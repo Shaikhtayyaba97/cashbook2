@@ -34,10 +34,9 @@ interface TransactionFormProps {
   initialData?: Transaction | null;
   defaultType?: TransactionType;
   onCancel: () => void;
-  formId: string;
 }
 
-export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in", onCancel, formId }: TransactionFormProps) {
+export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in", onCancel }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,7 +49,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
   
   return (
     <Form {...form}>
-      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex flex-col h-full">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex flex-col h-full">
         <div className="flex-grow space-y-6">
           <FormField
             control={form.control}
@@ -147,6 +146,10 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
             )}
           />
         </div>
+         <SheetFooter className="mt-auto pt-6">
+            <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+            <Button type="submit">Save changes</Button>
+        </SheetFooter>
       </form>
     </Form>
   );

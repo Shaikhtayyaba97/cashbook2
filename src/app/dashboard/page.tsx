@@ -8,7 +8,7 @@ import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, Timestamp, quer
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -44,8 +44,6 @@ export default function DashboardPage() {
     const [sheetMode, setSheetMode] = useState<{ type: TransactionType, editing: boolean }>({ type: 'cash-in', editing: false });
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
-
-    const transactionFormId = "transaction-form";
 
     useEffect(() => {
         if (!loading && !user) {
@@ -251,26 +249,19 @@ export default function DashboardPage() {
                 if (!open) setEditingTransaction(null);
             }}>
                 <SheetContent className="sm:max-w-lg w-[90vw] overflow-y-auto">
-                    <div className="flex flex-col h-full">
-                        <SheetHeader className="pb-4">
-                            <SheetTitle>{sheetTitle}</SheetTitle>
-                            <SheetDescription>{sheetDescription}</SheetDescription>
-                        </SheetHeader>
-                        
-                        <TransactionForm
-                            key={editingTransaction?.id || `new-${sheetMode.type}`}
-                            onSubmit={handleSaveTransaction}
-                            initialData={editingTransaction}
-                            defaultType={sheetMode.type}
-                            onCancel={() => setIsSheetOpen(false)}
-                            formId={transactionFormId}
-                        />
-                        
-                        <SheetFooter className="mt-auto pt-6">
-                            <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
-                            <Button type="submit" form={transactionFormId}>Save changes</Button>
-                        </SheetFooter>
-                    </div>
+                    <SheetHeader className="pb-4">
+                        <SheetTitle>{sheetTitle}</SheetTitle>
+                        <SheetDescription>{sheetDescription}</SheetDescription>
+                    </SheetHeader>
+                    
+                    <TransactionForm
+                        key={editingTransaction?.id || `new-${sheetMode.type}`}
+                        onSubmit={handleSaveTransaction}
+                        initialData={editingTransaction}
+                        defaultType={sheetMode.type}
+                        onCancel={() => setIsSheetOpen(false)}
+                    />
+
                 </SheetContent>
             </Sheet>
 
