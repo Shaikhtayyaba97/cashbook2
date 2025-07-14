@@ -5,7 +5,7 @@ import { getFirestore } from "firebase/firestore";
 
 // IMPORTANT:
 // 1. Paste your Firebase configuration object below.
-// 2. This file is now in .gitignore, so your keys will NOT be checked into source control.
+// 2. This file is in .gitignore, so your keys will NOT be stored in git.
 
 const firebaseConfig = {
   apiKey: "PASTE_YOUR_API_KEY_HERE",
@@ -15,7 +15,6 @@ const firebaseConfig = {
   messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
   appId: "PASTE_YOUR_APP_ID_HERE"
 };
-
 
 // Initialize Firebase
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

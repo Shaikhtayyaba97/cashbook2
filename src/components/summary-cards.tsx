@@ -54,7 +54,7 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
           <Sigma className="h-5 w-5 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-foreground' : 'text-red-600'}`}>
+          <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatAmount(netBalance)}
           </div>
           <p className="text-xs text-muted-foreground">Your current financial standing</p>

@@ -42,15 +42,35 @@ export default function SignupPage() {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       toast({
-          title: 'Success',
-          description: 'Account created successfully! Please log in.',
+          title: 'Success!',
+          description: 'Account created successfully. Please log in.',
       });
       router.push('/login');
     } catch (error: any) {
-        console.error("Signup error", error);
+        console.error("Signup error", error.code, error.message);
+        let description = 'An unknown error occurred. Please try again.';
+        switch(error.code) {
+            case 'auth/email-already-in-use':
+                description = 'This email address is already in use.';
+                break;
+            case 'auth/invalid-email':
+                description = 'The email address is not valid.';
+                break;
+            case 'auth/weak-password':
+                description = 'The password is too weak. It must be at least 6 characters long.';
+                break;
+            case 'auth/network-request-failed':
+                description = 'Network error. Please check your connection.';
+                break;
+             case 'auth/operation-not-allowed':
+                description = 'Email/Password sign-up is not enabled. Please contact support.';
+                break;
+            default:
+                description = 'An error occurred during sign up. Please try again.';
+        }
         toast({
             title: 'Sign Up Failed',
-            description: error.message || 'An unknown error occurred.',
+            description: description,
             variant: 'destructive'
         });
     } finally {

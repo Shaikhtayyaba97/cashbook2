@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +10,8 @@ import { Logo } from "@/components/logo";
 import { useToast } from '@/hooks/use-toast';
 import Link from "next/link";
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,6 +19,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        router.push('/dashboard');
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -31,12 +47,31 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
+      // The onAuthStateChanged listener will handle the redirect
     } catch (error: any) {
-      console.error("Login Error:", error);
+      console.error("Login Error:", error.code, error.message);
+      let description = 'An unknown error occurred. Please try again.';
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+          description = 'Invalid email or password. Please try again.';
+          break;
+        case 'auth/invalid-email':
+          description = 'The email address is not valid.';
+          break;
+        case 'auth/user-disabled':
+          description = 'This user account has been disabled.';
+          break;
+         case 'auth/network-request-failed':
+          description = 'Network error. Please check your connection.';
+          break;
+        default:
+          description = 'An error occurred during login. Please try again.';
+      }
       toast({
         title: 'Login Failed',
-        description: error.message || 'An unknown error occurred.',
+        description: description,
         variant: 'destructive',
       });
     } finally {
