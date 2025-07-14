@@ -45,6 +45,8 @@ export default function DashboardPage() {
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
 
+    const transactionFormId = "transaction-form";
+
     useEffect(() => {
         if (!loading && !user) {
             router.push('/login');
@@ -187,7 +189,7 @@ export default function DashboardPage() {
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (loading) {
+    if (loading || isLoadingData) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
@@ -249,18 +251,26 @@ export default function DashboardPage() {
                 if (!open) setEditingTransaction(null);
             }}>
                 <SheetContent className="sm:max-w-lg w-[90vw] overflow-y-auto">
-                     <SheetHeader className="pb-4">
-                        <SheetTitle>{sheetTitle}</SheetTitle>
-                        <SheetDescription>{sheetDescription}</SheetDescription>
-                    </SheetHeader>
-                    
-                    <TransactionForm
-                        key={editingTransaction?.id || `new-${sheetMode.type}`}
-                        onSubmit={handleSaveTransaction}
-                        initialData={editingTransaction}
-                        defaultType={sheetMode.type}
-                        onCancel={() => setIsSheetOpen(false)}
-                    />
+                    <div className="flex flex-col h-full">
+                        <SheetHeader className="pb-4">
+                            <SheetTitle>{sheetTitle}</SheetTitle>
+                            <SheetDescription>{sheetDescription}</SheetDescription>
+                        </SheetHeader>
+                        
+                        <TransactionForm
+                            key={editingTransaction?.id || `new-${sheetMode.type}`}
+                            onSubmit={handleSaveTransaction}
+                            initialData={editingTransaction}
+                            defaultType={sheetMode.type}
+                            onCancel={() => setIsSheetOpen(false)}
+                            formId={transactionFormId}
+                        />
+                        
+                        <SheetFooter className="mt-auto pt-6">
+                            <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
+                            <Button type="submit" form={transactionFormId}>Save changes</Button>
+                        </SheetFooter>
+                    </div>
                 </SheetContent>
             </Sheet>
 

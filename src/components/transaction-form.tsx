@@ -22,7 +22,7 @@ export type TransactionType = "cash-in" | "cash-out";
 
 const formSchema = z.object({
   type: z.enum(["cash-in", "cash-out"], { required_error: "You need to select a transaction type." }),
-  amount: z.coerce.number().positive({ message: "Amount must be a positive number." }),
+  amount: z.coerce.number({invalid_type_error: "Amount is required."}).positive({ message: "Amount must be a positive number." }),
   date: z.date({ required_error: "A date is required." }),
   description: z.string().min(1, { message: "Description cannot be empty." }).max(100, { message: "Description is too long." }),
 });
@@ -34,22 +34,23 @@ interface TransactionFormProps {
   initialData?: Transaction | null;
   defaultType?: TransactionType;
   onCancel: () => void;
+  formId: string;
 }
 
-export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in", onCancel }: TransactionFormProps) {
+export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in", onCancel, formId }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: initialData?.type ?? defaultType,
-      amount: initialData?.amount ?? undefined,
+      amount: initialData?.amount ?? ('' as any),
       date: initialData?.date ? new Date(initialData.date) : new Date(),
       description: initialData?.description ?? "",
     },
   });
-
+  
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex flex-col h-full">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 flex flex-col h-full">
         <div className="flex-grow space-y-6">
           <FormField
             control={form.control}
@@ -89,7 +90,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
               <FormItem>
                 <FormLabel>Amount</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="0.00" {...field} onChange={e => field.onChange(e.target.valueAsNumber)} />
+                  <Input type="number" placeholder="0.00" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -146,11 +147,6 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
             )}
           />
         </div>
-        
-        <SheetFooter className="mt-auto pt-6">
-            <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-            <Button type="submit">Save changes</Button>
-        </SheetFooter>
       </form>
     </Form>
   );
