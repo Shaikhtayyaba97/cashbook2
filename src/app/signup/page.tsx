@@ -9,15 +9,18 @@ import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { useToast } from '@/hooks/use-toast';
 import Link from "next/link";
+import { auth } from '@/lib/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     if (password !== confirmPassword) {
       toast({
         title: 'Error',
@@ -26,24 +29,33 @@ export default function SignupPage() {
       });
       return;
     }
-    if (!phone || !password) {
+    if (!email || !password) {
       toast({
         title: 'Error',
-        description: 'Phone number and password are required.',
+        description: 'Email and password are required.',
         variant: 'destructive'
       });
       return;
     }
 
-    const newUser = { phone, password };
-    localStorage.setItem('user', JSON.stringify(newUser));
-    localStorage.setItem(`transactions_${phone}`, JSON.stringify([]));
-    
-    toast({
-        title: 'Success',
-        description: 'Account created successfully! Please log in.',
-    });
-    router.push('/login');
+    setIsLoading(true);
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      toast({
+          title: 'Success',
+          description: 'Account created successfully! Please log in.',
+      });
+      router.push('/login');
+    } catch (error: any) {
+        console.error("Signup error", error);
+        toast({
+            title: 'Sign Up Failed',
+            description: error.message || 'An unknown error occurred.',
+            variant: 'destructive'
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -60,8 +72,8 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="phone">Phone Number</Label>
-            <Input id="phone" type="tel" placeholder="+1 123 456 7890" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" placeholder="me@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
@@ -73,7 +85,9 @@ export default function SignupPage() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button className="w-full" onClick={handleSignup}>Create Account</Button>
+          <Button className="w-full" onClick={handleSignup} disabled={isLoading}>
+            {isLoading ? 'Creating account...' : 'Create Account'}
+          </Button>
            <div className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
               <Link href="/login" className="underline hover:text-primary">

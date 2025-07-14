@@ -4,13 +4,19 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { LogOut } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 
 export function Header() {
   const router = useRouter();
 
-  const handleLogout = () => {
-    localStorage.removeItem('loggedInUser');
-    router.push('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push('/login');
+    } catch (error) {
+      console.error("Logout Error:", error);
+    }
   };
 
   return (

@@ -2,6 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { auth, db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, Timestamp, query, where, orderBy } from "firebase/firestore";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -14,8 +17,6 @@ import { Header } from "@/components/header";
 import { SummaryCards } from "@/components/summary-cards";
 import { TransactionTable } from "@/components/transaction-table";
 import { TransactionForm, type TransactionFormValues, type TransactionType } from "@/components/transaction-form";
-
-import { mockTransactions } from "@/lib/data";
 import type { Transaction } from "@/lib/types";
 
 // Helper to get the last 12 months
@@ -31,7 +32,10 @@ const getLast12Months = () => {
 
 export default function DashboardPage() {
     const router = useRouter();
+    const [user, loading] = useAuthState(auth);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+
     const [filterMonth, setFilterMonth] = useState<string>(
         new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
     );
@@ -40,29 +44,37 @@ export default function DashboardPage() {
     const [sheetMode, setSheetMode] = useState<{ type: TransactionType, editing: boolean }>({ type: 'cash-in', editing: false });
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
-    const [userPhone, setUserPhone] = useState<string | null>(null);
 
     useEffect(() => {
-        const loggedInUser = localStorage.getItem('loggedInUser');
-        if (!loggedInUser) {
+        if (loading) return;
+        if (!user) {
             router.push('/login');
-        } else {
-            setUserPhone(loggedInUser);
-            const storedTransactions = localStorage.getItem(`transactions_${loggedInUser}`);
-            if (storedTransactions) {
-                const parsed = JSON.parse(storedTransactions).map((t: any) => ({...t, date: new Date(t.date)}));
-                setTransactions(parsed);
-            } else {
-                 setTransactions(mockTransactions);
-            }
+            return;
         }
-    }, [router]);
-    
-    useEffect(() => {
-        if(userPhone) {
-            localStorage.setItem(`transactions_${userPhone}`, JSON.stringify(transactions));
-        }
-    }, [transactions, userPhone]);
+
+        const fetchTransactions = async () => {
+            setIsLoadingData(true);
+            const q = query(
+                collection(db, "users", user.uid, "transactions"), 
+                orderBy("date", "desc")
+            );
+            const querySnapshot = await getDocs(q);
+            const fetchedTransactions: Transaction[] = [];
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                fetchedTransactions.push({
+                    id: doc.id,
+                    ...data,
+                    date: (data.date as Timestamp).toDate(),
+                } as Transaction);
+            });
+            setTransactions(fetchedTransactions);
+            setIsLoadingData(false);
+        };
+
+        fetchTransactions();
+
+    }, [user, loading, router]);
 
 
     const handleAddTransaction = (type: TransactionType) => {
@@ -77,30 +89,55 @@ export default function DashboardPage() {
         setIsSheetOpen(true);
     };
 
-    const handleDeleteConfirm = () => {
-        if (deletingTransactionId) {
-            setTransactions(prev => prev.filter(t => t.id !== deletingTransactionId));
-            setDeletingTransactionId(null);
+    const handleDeleteConfirm = async () => {
+        if (deletingTransactionId && user) {
+            try {
+                await deleteDoc(doc(db, "users", user.uid, "transactions", deletingTransactionId));
+                setTransactions(prev => prev.filter(t => t.id !== deletingTransactionId));
+            } catch (error) {
+                console.error("Error deleting transaction: ", error);
+            } finally {
+                setDeletingTransactionId(null);
+            }
         }
     };
 
-    const handleSaveTransaction = (data: TransactionFormValues) => {
+    const handleSaveTransaction = async (data: TransactionFormValues) => {
+        if (!user) return;
+        
+        const transactionData = {
+            ...data,
+            amount: Number(data.amount),
+            date: Timestamp.fromDate(data.date),
+        };
+
         if (editingTransaction) {
-            setTransactions(prev =>
-                prev.map(t =>
-                    t.id === editingTransaction.id ? { ...t, ...data, amount: Number(data.amount), date: data.date } : t
-                )
-            );
+            // Update existing transaction in Firestore
+            try {
+                const docRef = doc(db, "users", user.uid, "transactions", editingTransaction.id);
+                await updateDoc(docRef, transactionData);
+                setTransactions(prev =>
+                    prev.map(t =>
+                        t.id === editingTransaction.id ? { ...t, ...data, amount: Number(data.amount), date: data.date } : t
+                    )
+                );
+            } catch (error) {
+                console.error("Error updating transaction: ", error);
+            }
         } else {
-            setTransactions(prev => [
-                {
-                    id: new Date().toISOString(),
+            // Add new transaction to Firestore
+            try {
+                const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transactionData);
+                const newTransaction: Transaction = {
+                    id: docRef.id,
                     ...data,
                     amount: Number(data.amount),
                     date: data.date,
-                },
-                ...prev
-            ]);
+                };
+                setTransactions(prev => [newTransaction, ...prev]);
+            } catch (error) {
+                console.error("Error adding transaction: ", error);
+            }
         }
         setIsSheetOpen(false);
         setEditingTransaction(null);
@@ -144,7 +181,7 @@ export default function DashboardPage() {
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (!userPhone) {
+    if (loading || (!user && !loading) || isLoadingData) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
 
