@@ -106,36 +106,42 @@ export default function DashboardPage() {
     const handleSaveTransaction = async (data: TransactionFormValues) => {
         if (!user) return;
         
-        const transactionData = {
+        const transactionDataForFirestore = {
             ...data,
             amount: Number(data.amount),
-            date: Timestamp.fromDate(data.date),
+            date: Timestamp.fromDate(new Date(data.date)),
         };
 
         if (editingTransaction) {
-            // Update existing transaction in Firestore
             try {
                 const docRef = doc(db, "users", user.uid, "transactions", editingTransaction.id);
-                await updateDoc(docRef, transactionData);
+                await updateDoc(docRef, transactionDataForFirestore);
+                
+                const updatedTransaction: Transaction = {
+                    id: editingTransaction.id,
+                    ...data,
+                    amount: Number(data.amount),
+                    date: new Date(data.date)
+                };
+
                 setTransactions(prev =>
                     prev.map(t =>
-                        t.id === editingTransaction.id ? { ...t, ...data, amount: Number(data.amount), date: data.date } : t
+                        t.id === editingTransaction.id ? updatedTransaction : t
                     )
                 );
             } catch (error) {
                 console.error("Error updating transaction: ", error);
             }
         } else {
-            // Add new transaction to Firestore
             try {
-                const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transactionData);
+                const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transactionDataForFirestore);
                 const newTransaction: Transaction = {
                     id: docRef.id,
                     ...data,
                     amount: Number(data.amount),
-                    date: data.date,
+                    date: new Date(data.date),
                 };
-                setTransactions(prev => [newTransaction, ...prev]);
+                setTransactions(prev => [newTransaction, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
             } catch (error) {
                 console.error("Error adding transaction: ", error);
             }
@@ -225,7 +231,7 @@ export default function DashboardPage() {
                         </Button>
                          <Button size="sm" variant="destructive" className="h-9 gap-1 flex-1" onClick={() => handleAddTransaction('cash-out')}>
                             <ArrowDownToLine className="h-4 w-4" />
-                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                            <span className="sr-only sm:not-sr-only sm:whitespace-rap">
                                 Cash Out
                             </span>
                         </Button>
@@ -253,6 +259,7 @@ export default function DashboardPage() {
                         initialData={editingTransaction}
                         defaultType={sheetMode.type}
                     />
+
                     <SheetFooter className="mt-6">
                          <Button form="transaction-form" type="submit">Save changes</Button>
                     </SheetFooter>
@@ -275,4 +282,5 @@ export default function DashboardPage() {
             </AlertDialog>
         </div>
     );
-}
+
+    
