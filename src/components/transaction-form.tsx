@@ -16,6 +16,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
+export type TransactionType = "cash-in" | "cash-out";
+
 const formSchema = z.object({
   type: z.enum(["cash-in", "cash-out"], { required_error: "You need to select a transaction type." }),
   amount: z.coerce.number().positive({ message: "Amount must be positive." }),
@@ -28,15 +30,16 @@ export type TransactionFormValues = z.infer<typeof formSchema>;
 interface TransactionFormProps {
   onSubmit: (data: TransactionFormValues) => void;
   initialData?: Transaction | null;
+  defaultType?: TransactionType;
 }
 
-export function TransactionForm({ onSubmit, initialData }: TransactionFormProps) {
+export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in" }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData
       ? { ...initialData, date: new Date(initialData.date) }
       : {
-          type: "cash-in",
+          type: defaultType,
           amount: undefined,
           date: new Date(),
           description: "",
@@ -144,3 +147,5 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
     </Form>
   );
 }
+
+    

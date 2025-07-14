@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { PlusCircle } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
@@ -12,16 +12,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Header } from "@/components/header";
 import { SummaryCards } from "@/components/summary-cards";
 import { TransactionTable } from "@/components/transaction-table";
-import { TransactionForm, type TransactionFormValues } from "@/components/transaction-form";
+import { TransactionForm, type TransactionFormValues, type TransactionType } from "@/components/transaction-form";
 
 import { mockTransactions } from "@/lib/data";
 import type { Transaction } from "@/lib/types";
 
+// Helper to get the last 12 months
+const getLast12Months = () => {
+    const months = [];
+    const currentDate = new Date();
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+        months.push(date.toLocaleString('default', { month: 'long', year: 'numeric' }));
+    }
+    return months;
+};
+
 export default function DashboardPage() {
     const router = useRouter();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [filterMonth, setFilterMonth] = useState<string>("all");
+    const [filterMonth, setFilterMonth] = useState<string>(
+        new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+    );
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [sheetMode, setSheetMode] = useState<{ type: TransactionType, editing: boolean }>({ type: 'cash-in', editing: false });
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
     const [userPhone, setUserPhone] = useState<string | null>(null);
@@ -49,13 +63,15 @@ export default function DashboardPage() {
     }, [transactions, userPhone]);
 
 
-    const handleAddTransaction = () => {
+    const handleAddTransaction = (type: TransactionType) => {
         setEditingTransaction(null);
+        setSheetMode({ type, editing: false });
         setIsSheetOpen(true);
     };
 
     const handleEditTransaction = (transaction: Transaction) => {
         setEditingTransaction(transaction);
+        setSheetMode({ type: transaction.type, editing: true });
         setIsSheetOpen(true);
     };
 
@@ -89,12 +105,8 @@ export default function DashboardPage() {
     };
 
     const availableMonths = useMemo(() => {
-        const monthSet = new Set<string>();
-        transactions.forEach(t => {
-            monthSet.add(new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' }));
-        });
-        return Array.from(monthSet).sort((a,b) => new Date(b).getTime() - new Date(a).getTime());
-    }, [transactions]);
+        return getLast12Months();
+    }, []);
 
     const filteredTransactions = useMemo(() => {
         if (filterMonth === 'all') {
@@ -106,8 +118,8 @@ export default function DashboardPage() {
         });
     }, [transactions, filterMonth]);
     
-    const sheetTitle = editingTransaction ? "Edit Transaction" : "Add New Transaction";
-    const sheetDescription = editingTransaction ? "Update the details of your transaction." : "Add a new cash-in or cash-out entry.";
+    const sheetTitle = sheetMode.editing ? "Edit Transaction" : (sheetMode.type === 'cash-in' ? 'Add Cash In' : 'Add Cash Out');
+    const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
     if (!userPhone) {
@@ -121,12 +133,11 @@ export default function DashboardPage() {
                 <SummaryCards transactions={filteredTransactions} />
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                     <div className="w-full sm:w-auto">
-                        <Select onValueChange={setFilterMonth} defaultValue="all">
-                            <SelectTrigger className="w-full sm:w-[180px]">
+                        <Select onValueChange={setFilterMonth} defaultValue={filterMonth}>
+                            <SelectTrigger className="w-full sm:w-[200px]">
                                 <SelectValue placeholder="Filter by month" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">All Months</SelectItem>
                                 {availableMonths.map(month => (
                                     <SelectItem key={month} value={month}>{month}</SelectItem>
                                 ))}
@@ -134,10 +145,16 @@ export default function DashboardPage() {
                         </Select>
                     </div>
                     <div className="ml-auto flex items-center gap-2">
-                         <Button size="sm" className="h-9 gap-1" onClick={handleAddTransaction}>
-                            <PlusCircle className="h-4 w-4" />
+                         <Button size="sm" className="h-9 gap-1" onClick={() => handleAddTransaction('cash-in')}>
+                            <ArrowUpFromLine className="h-4 w-4" />
                             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                                Add Transaction
+                                Cash In
+                            </span>
+                        </Button>
+                         <Button size="sm" variant="destructive" className="h-9 gap-1" onClick={() => handleAddTransaction('cash-out')}>
+                            <ArrowDownToLine className="h-4 w-4" />
+                            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                                Cash Out
                             </span>
                         </Button>
                     </div>
@@ -159,9 +176,10 @@ export default function DashboardPage() {
                         <SheetDescription>{sheetDescription}</SheetDescription>
                     </SheetHeader>
                     <TransactionForm
-                        key={editingTransaction?.id || 'new'}
+                        key={editingTransaction?.id || `new-${sheetMode.type}`}
                         onSubmit={handleSaveTransaction}
                         initialData={editingTransaction}
+                        defaultType={sheetMode.type}
                     />
                     <SheetFooter className="mt-6">
                          <Button form="transaction-form" type="submit">Save changes</Button>
@@ -185,4 +203,5 @@ export default function DashboardPage() {
             </AlertDialog>
         </div>
     );
-}
+
+    
