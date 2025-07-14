@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// This page is no longer needed with phone authentication, as signup and login are the same flow.
+// This page is no longer needed as the login page now handles both sign-in and sign-up.
 // We redirect users to the login page.
 export default function SignupPage() {
   const router = useRouter();
