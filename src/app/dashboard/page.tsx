@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Header } from "@/components/header";
 import { SummaryCards } from "@/components/summary-cards";
@@ -34,6 +35,7 @@ export default function DashboardPage() {
     const [filterMonth, setFilterMonth] = useState<string>(
         new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
     );
+    const [filterType, setFilterType] = useState<"all" | TransactionType>("all");
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [sheetMode, setSheetMode] = useState<{ type: TransactionType, editing: boolean }>({ type: 'cash-in', editing: false });
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -105,14 +107,34 @@ export default function DashboardPage() {
     };
 
     const availableMonths = useMemo(() => {
-        return getLast12Months();
+        const months = getLast12Months();
+        months.unshift('All Months');
+        return months;
     }, []);
 
     const filteredTransactions = useMemo(() => {
-        if (filterMonth === 'all') {
-            return transactions;
+        let monthFiltered = transactions;
+
+        if (filterMonth !== 'All Months') {
+            monthFiltered = transactions.filter(t => {
+                const monthYear = new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' });
+                return monthYear === filterMonth;
+            });
         }
-        return transactions.filter(t => {
+        
+        if (filterType === 'all') {
+            return monthFiltered;
+        }
+
+        return monthFiltered.filter(t => t.type === filterType);
+
+    }, [transactions, filterMonth, filterType]);
+
+    const summaryTransactions = useMemo(() => {
+         if (filterMonth === 'All Months') {
+            return transactions;
+         }
+         return transactions.filter(t => {
             const monthYear = new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' });
             return monthYear === filterMonth;
         });
@@ -130,10 +152,10 @@ export default function DashboardPage() {
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Header />
             <main className="flex flex-1 flex-col gap-4 p-4 sm:p-6 md:gap-8 md:p-8">
-                <SummaryCards transactions={filteredTransactions} />
+                <SummaryCards transactions={summaryTransactions} />
                 <div className="flex flex-col sm:flex-row items-center gap-4">
-                    <div className="w-full sm:w-auto">
-                        <Select onValueChange={setFilterMonth} defaultValue={filterMonth}>
+                    <div className="flex flex-col sm:flex-row items-center gap-2 w-full">
+                         <Select onValueChange={setFilterMonth} defaultValue={filterMonth}>
                             <SelectTrigger className="w-full sm:w-[200px]">
                                 <SelectValue placeholder="Filter by month" />
                             </SelectTrigger>
@@ -143,7 +165,15 @@ export default function DashboardPage() {
                                 ))}
                             </SelectContent>
                         </Select>
+                        <Tabs value={filterType} onValueChange={(value) => setFilterType(value as any)} className="w-full sm:w-auto">
+                            <TabsList className="grid w-full grid-cols-3 sm:w-auto">
+                                <TabsTrigger value="all">All</TabsTrigger>
+                                <TabsTrigger value="cash-in">Cash In</TabsTrigger>
+                                <TabsTrigger value="cash-out">Cash Out</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
+
                     <div className="ml-auto flex items-center gap-2 w-full sm:w-auto">
                          <Button size="sm" className="h-9 gap-1 flex-1" onClick={() => handleAddTransaction('cash-in')}>
                             <ArrowUpFromLine className="h-4 w-4" />
