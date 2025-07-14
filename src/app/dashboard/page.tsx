@@ -1,11 +1,11 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth.tsx";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, deleteDoc, doc, Timestamp, onSnapshot, query, orderBy } from "firebase/firestore";
+import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -35,35 +35,48 @@ export default function DashboardPage() {
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // Redirect if not logged in
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/login');
         }
     }, [user, authLoading, router]);
     
+    // Load transactions from local storage
     useEffect(() => {
         if (user) {
             setLoading(true);
-            const q = query(collection(db, 'users', user.uid, 'transactions'), orderBy('date', 'desc'));
-            const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                const transactionsData = querySnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        ...data,
-                        date: (data.date as Timestamp).toDate(),
-                    } as Transaction;
-                });
-                setTransactions(transactionsData);
+            try {
+                const storedTransactions = localStorage.getItem(`transactions_${user.email}`);
+                if (storedTransactions) {
+                    const parsedTransactions = JSON.parse(storedTransactions).map((t: any) => ({
+                        ...t,
+                        date: new Date(t.date), // Ensure date is a Date object
+                    }));
+                    setTransactions(parsedTransactions);
+                } else {
+                    setTransactions([]);
+                }
+            } catch (error) {
+                console.error("Failed to load transactions from local storage", error);
+                setTransactions([]);
+            } finally {
                 setLoading(false);
-            }, (error) => {
-                console.error("Error fetching transactions:", error);
-                setLoading(false);
-            });
-
-            return () => unsubscribe();
+            }
         }
     }, [user]);
+
+    // Save transactions to local storage whenever they change
+    useEffect(() => {
+        if (user && !loading) {
+             try {
+                const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                localStorage.setItem(`transactions_${user.email}`, JSON.stringify(sortedTransactions));
+            } catch (error) {
+                console.error("Failed to save transactions to local storage", error);
+            }
+        }
+    }, [transactions, user, loading]);
 
     const [filterMonth, setFilterMonth] = useState<string>('All Months');
     const [filterType, setFilterType] = useState<"all" | TransactionType>("all");
@@ -85,36 +98,26 @@ export default function DashboardPage() {
     };
     
     const handleDeleteConfirm = async () => {
-        if (deletingTransactionId && user) {
-            try {
-                await deleteDoc(doc(db, 'users', user.uid, 'transactions', deletingTransactionId));
-                setDeletingTransactionId(null);
-            } catch (e) {
-                console.error("Error deleting document: ", e);
-            }
+        if (deletingTransactionId) {
+            setTransactions(transactions.filter(t => t.id !== deletingTransactionId));
+            setDeletingTransactionId(null);
         }
     };
 
     const handleSaveTransaction = async (data: TransactionFormValues) => {
-        if (!user) return;
-
-        const transactionData = {
-            ...data,
-            date: Timestamp.fromDate(data.date),
-        };
-
-        try {
-            if (editingTransaction) {
-                const docRef = doc(db, 'users', user.uid, 'transactions', editingTransaction.id);
-                await updateDoc(docRef, transactionData);
-            } else {
-                await addDoc(collection(db, 'users', user.uid, 'transactions'), transactionData);
-            }
-            setIsSheetOpen(false);
-            setEditingTransaction(null);
-        } catch (e) {
-            console.error("Error saving document: ", e);
+        if (editingTransaction) {
+            // Update existing transaction
+            setTransactions(transactions.map(t => t.id === editingTransaction.id ? { ...t, ...data } : t));
+        } else {
+            // Add new transaction
+            const newTransaction: Transaction = {
+                id: uuidv4(), // Generate a unique ID
+                ...data,
+            };
+            setTransactions(prev => [...prev, newTransaction]);
         }
+        setIsSheetOpen(false);
+        setEditingTransaction(null);
     };
 
     const availableMonths = useMemo(() => {

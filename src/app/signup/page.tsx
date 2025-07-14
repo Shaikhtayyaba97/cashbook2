@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -6,8 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/hooks/use-auth";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ type SignupFormValues = z.infer<typeof formSchema>;
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { signup } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SignupFormValues>({
@@ -39,8 +40,16 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
-      router.push('/dashboard');
+      const success = signup(data.email, data.password);
+      if (success) {
+        router.push('/dashboard');
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Sign-up Failed",
+          description: "A user with this email already exists.",
+        });
+      }
     } catch (error: any) {
        toast({
         variant: "destructive",
