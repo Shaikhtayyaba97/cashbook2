@@ -8,18 +8,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { useToast } from '@/hooks/use-toast';
-import Link from "next/link";
 import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPhoneNumber, RecaptchaVerifier, onAuthStateChanged, type ConfirmationResult } from 'firebase/auth';
 import type { User } from 'firebase/auth';
+
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier;
+    confirmationResult?: ConfirmationResult;
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -34,83 +41,93 @@ export default function LoginPage() {
     return () => unsubscribe();
   }, [router]);
 
-
-  const handleLogin = async () => {
-    if (!email || !password) {
-      toast({
-        title: 'Error',
-        description: 'Please enter both email and password.',
-        variant: 'destructive',
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.recaptchaVerifier) {
+      // The 'sign-in-button' is an invisible container for the reCAPTCHA
+      window.recaptchaVerifier = new RecaptchaVerifier(auth, 'sign-in-button', {
+        'size': 'invisible',
+        'callback': (response: any) => {
+          // reCAPTCHA solved, allow signInWithPhoneNumber.
+        }
       });
+    }
+  }, []);
+
+  const handleSendOtp = async () => {
+    if (!phone) {
+      toast({ title: 'Error', description: 'Please enter a phone number.', variant: 'destructive' });
       return;
     }
     setIsLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      // The onAuthStateChanged listener will handle the redirect
+      const verifier = window.recaptchaVerifier!;
+      const confirmationResult = await signInWithPhoneNumber(auth, phone, verifier);
+      window.confirmationResult = confirmationResult;
+      setOtpSent(true);
+      toast({ title: 'Success', description: 'OTP sent to your phone.' });
     } catch (error: any) {
-      console.error("Login Error:", error.code, error.message);
-      let description = 'An unknown error occurred. Please try again.';
-      switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-          description = 'Invalid email or password. Please try again.';
-          break;
-        case 'auth/invalid-email':
-          description = 'The email address is not valid.';
-          break;
-        case 'auth/user-disabled':
-          description = 'This user account has been disabled.';
-          break;
-         case 'auth/network-request-failed':
-          description = 'Network error. Please check your connection.';
-          break;
-        default:
-          description = 'An error occurred during login. Please try again.';
-      }
-      toast({
-        title: 'Login Failed',
-        description: description,
-        variant: 'destructive',
-      });
+      console.error("OTP Error:", error);
+      toast({ title: 'Error Sending OTP', description: error.message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleVerifyOtp = async () => {
+    if (!otp) {
+      toast({ title: 'Error', description: 'Please enter the OTP.', variant: 'destructive' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await window.confirmationResult?.confirm(otp);
+      // onAuthStateChanged will handle the redirect
+      toast({ title: 'Success!', description: 'Logged in successfully.' });
+    } catch (error: any) {
+      console.error("Verification Error:", error);
+      toast({ title: 'Login Failed', description: 'Invalid OTP or an error occurred.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   return (
     <div className="flex min-h-screen w-full flex-col items-center justify-center bg-muted/40 p-4">
+      <div id="sign-in-button"></div>
       <div className="mb-8">
         <Logo />
       </div>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Sign In / Sign Up</CardTitle>
           <CardDescription>
-            Enter your email and password to access your account.
+            Enter your phone number to receive a verification code.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="me@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
+          {!otpSent ? (
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input id="phone" type="tel" placeholder="+1 123 456 7890" required value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+          ) : (
+            <div className="grid gap-2">
+              <Label htmlFor="otp">Verification Code</Label>
+              <Input id="otp" type="text" placeholder="123456" required value={otp} onChange={(e) => setOtp(e.target.value)} />
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-          <Button className="w-full" onClick={handleLogin} disabled={isLoading}>
-            {isLoading ? 'Signing in...' : 'Sign in'}
-          </Button>
-           <div className="text-center text-sm text-muted-foreground">
-              Don&apos;t have an account?{" "}
-              <Link href="/signup" className="underline hover:text-primary">
-                Sign up
-              </Link>
-            </div>
+          {!otpSent ? (
+            <Button className="w-full" onClick={handleSendOtp} disabled={isLoading}>
+              {isLoading ? 'Sending OTP...' : 'Send OTP'}
+            </Button>
+          ) : (
+            <Button className="w-full" onClick={handleVerifyOtp} disabled={isLoading}>
+              {isLoading ? 'Verifying...' : 'Verify & Sign In'}
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </div>
