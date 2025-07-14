@@ -85,14 +85,14 @@ export default function DashboardPage() {
         setIsSheetOpen(true);
     };
     
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = () => {
         if (deletingTransactionId) {
             setTransactions(transactions.filter(t => t.id !== deletingTransactionId));
             setDeletingTransactionId(null);
         }
     };
 
-    const handleSaveTransaction = async (data: TransactionFormValues) => {
+    const handleSaveTransaction = (data: TransactionFormValues) => {
         if (editingTransaction) {
             // Update existing transaction
             setTransactions(transactions.map(t => 
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the transaction record.
-                        </Description>
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
