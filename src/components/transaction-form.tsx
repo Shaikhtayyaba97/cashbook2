@@ -22,7 +22,7 @@ export type TransactionType = "cash-in" | "cash-out";
 
 const formSchema = z.object({
   type: z.enum(["cash-in", "cash-out"], { required_error: "You need to select a transaction type." }),
-  amount: z.coerce.number({invalid_type_error: "Amount is required."}).gt(0, { message: "Amount must be a positive number." }),
+  amount: z.coerce.number({invalid_type_error: "Amount is required and must be a number."}).gt(0, { message: "Amount must be greater than 0." }),
   date: z.date({ required_error: "A date is required." }),
   description: z.string().min(1, { message: "Description cannot be empty." }).max(100, { message: "Description is too long." }),
 });
