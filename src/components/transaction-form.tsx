@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,9 +32,10 @@ interface TransactionFormProps {
   onSubmit: (data: TransactionFormValues) => void;
   initialData?: Transaction | null;
   defaultType?: TransactionType;
+  children?: React.ReactNode;
 }
 
-export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in" }: TransactionFormProps) {
+export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in", children }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData
@@ -48,7 +50,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
 
   return (
     <Form {...form}>
-      <form id="transaction-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="type"
@@ -143,6 +145,8 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
             </FormItem>
           )}
         />
+        
+        {children}
       </form>
     </Form>
   );

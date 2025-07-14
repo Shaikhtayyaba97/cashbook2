@@ -254,16 +254,17 @@ export default function DashboardPage() {
                         <SheetTitle>{sheetTitle}</SheetTitle>
                         <SheetDescription>{sheetDescription}</SheetDescription>
                     </SheetHeader>
+                    
                     <TransactionForm
                         key={editingTransaction?.id || `new-${sheetMode.type}`}
                         onSubmit={handleSaveTransaction}
                         initialData={editingTransaction}
                         defaultType={sheetMode.type}
-                    />
-
-                    <SheetFooter className="mt-6">
-                         <Button form="transaction-form" type="submit">Save changes</Button>
-                    </SheetFooter>
+                    >
+                        <SheetFooter className="mt-6">
+                            <Button type="submit">Save changes</Button>
+                        </SheetFooter>
+                    </TransactionForm>
                 </SheetContent>
             </Sheet>
 
@@ -283,6 +284,4 @@ export default function DashboardPage() {
             </AlertDialog>
         </div>
     );
-
-    
 }
