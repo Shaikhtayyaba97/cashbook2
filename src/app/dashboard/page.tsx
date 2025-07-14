@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth.tsx";
+import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { v4 as uuidv4 } from 'uuid';
@@ -47,7 +47,7 @@ export default function DashboardPage() {
         if (user) {
             setLoading(true);
             try {
-                const storedTransactions = localStorage.getItem(`transactions_${user.email}`);
+                const storedTransactions = localStorage.getItem(`transactions_${user.phone}`);
                 if (storedTransactions) {
                     const parsedTransactions = JSON.parse(storedTransactions).map((t: any) => ({
                         ...t,
@@ -71,7 +71,7 @@ export default function DashboardPage() {
         if (user && !loading) {
              try {
                 const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                localStorage.setItem(`transactions_${user.email}`, JSON.stringify(sortedTransactions));
+                localStorage.setItem(`transactions_${user.phone}`, JSON.stringify(sortedTransactions));
             } catch (error) {
                 console.error("Failed to save transactions to local storage", error);
             }

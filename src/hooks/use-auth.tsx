@@ -5,14 +5,14 @@ import { useState, useEffect, createContext, useContext, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 
 interface User {
-  email: string;
+  phone: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password?: string) => boolean;
-  signup: (email: string, password?: string) => boolean;
+  login: (phone: string, password?: string) => boolean;
+  signup: (phone: string, password?: string) => boolean;
   logout: () => void;
 }
 
@@ -43,14 +43,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = (email: string, password?: string): boolean => {
+  const login = (phone: string, password?: string): boolean => {
     try {
         const storedUsers = localStorage.getItem('users');
         const users = storedUsers ? JSON.parse(storedUsers) : {};
         
         // In a real app, you'd check the hashed password. Here, we just check for existence.
-        if (users[email]) {
-            const loggedInUser = { email };
+        if (users[phone]) {
+            const loggedInUser = { phone };
             localStorage.setItem('currentUser', JSON.stringify(loggedInUser));
             setUser(loggedInUser);
             return true;
@@ -62,20 +62,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signup = (email: string, password?: string): boolean => {
+  const signup = (phone: string, password?: string): boolean => {
     try {
         const storedUsers = localStorage.getItem('users');
         const users = storedUsers ? JSON.parse(storedUsers) : {};
         
-        if (users[email]) {
+        if (users[phone]) {
             return false; // User already exists
         }
         
         // In a real app, you would hash the password
-        users[email] = { password };
+        users[phone] = { password };
         localStorage.setItem('users', JSON.stringify(users));
 
-        const newUser = { email };
+        const newUser = { phone };
         localStorage.setItem('currentUser', JSON.stringify(newUser));
         setUser(newUser);
         return true;
