@@ -187,7 +187,7 @@ export default function DashboardPage() {
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (loading || isLoadingData) {
+    if (loading || (!user && !loading)) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
