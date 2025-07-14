@@ -144,14 +144,14 @@ export default function DashboardPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="ml-auto flex items-center gap-2">
-                         <Button size="sm" className="h-9 gap-1" onClick={() => handleAddTransaction('cash-in')}>
+                    <div className="ml-auto flex items-center gap-2 w-full sm:w-auto">
+                         <Button size="sm" className="h-9 gap-1 flex-1" onClick={() => handleAddTransaction('cash-in')}>
                             <ArrowUpFromLine className="h-4 w-4" />
                             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                                 Cash In
                             </span>
                         </Button>
-                         <Button size="sm" variant="destructive" className="h-9 gap-1" onClick={() => handleAddTransaction('cash-out')}>
+                         <Button size="sm" variant="destructive" className="h-9 gap-1 flex-1" onClick={() => handleAddTransaction('cash-out')}>
                             <ArrowDownToLine className="h-4 w-4" />
                             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                                 Cash Out
@@ -203,5 +203,4 @@ export default function DashboardPage() {
             </AlertDialog>
         </div>
     );
-
-    
+}

@@ -22,19 +22,19 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
     return { totalIn, totalOut, netBalance };
   }, [transactions]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+  const formatAmount = (amount: number) => {
+    return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Cash In</CardTitle>
           <ArrowUpCircle className="h-5 w-5 text-green-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIn)}</div>
+          <div className="text-2xl font-bold text-green-600">{formatAmount(totalIn)}</div>
           <p className="text-xs text-muted-foreground">Total income received</p>
         </CardContent>
       </Card>
@@ -44,7 +44,7 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
           <ArrowDownCircle className="h-5 w-5 text-red-500" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold text-red-600">{formatCurrency(totalOut)}</div>
+          <div className="text-2xl font-bold text-red-600">{formatAmount(totalOut)}</div>
           <p className="text-xs text-muted-foreground">Total expenses paid</p>
         </CardContent>
       </Card>
@@ -55,7 +55,7 @@ export function SummaryCards({ transactions }: SummaryCardsProps) {
         </CardHeader>
         <CardContent>
           <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-foreground' : 'text-red-600'}`}>
-            {formatCurrency(netBalance)}
+            {formatAmount(netBalance)}
           </div>
           <p className="text-xs text-muted-foreground">Your current financial standing</p>
         </CardContent>
