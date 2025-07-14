@@ -57,6 +57,7 @@ export default function LoginPage() {
           break;
         case 'auth/user-not-found':
         case 'auth/wrong-password':
+        case 'auth/invalid-credential':
           description = 'Invalid phone number or password.';
           break;
         case 'auth/weak-password':
