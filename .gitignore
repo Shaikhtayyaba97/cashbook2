@@ -39,5 +39,13 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Firebase credentials
+# Firebase Studio
+.firebase/
+firebase.json
+database.rules.json
+firestore.rules
+firestore.indexes.json
+storage.rules
+
+# Custom: Ignore Firebase config to protect secrets
 /src/lib/firebase.ts
