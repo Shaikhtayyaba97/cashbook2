@@ -74,8 +74,10 @@ export default function DashboardPage() {
             };
 
             fetchTransactions();
+        } else if (!loading) {
+            setIsLoadingData(false);
         }
-    }, [user]);
+    }, [user, loading]);
 
 
     const handleAddTransaction = (type: TransactionType) => {
@@ -112,8 +114,8 @@ export default function DashboardPage() {
             date: Timestamp.fromDate(new Date(data.date)),
         };
 
-        if (editingTransaction) {
-            try {
+        try {
+            if (editingTransaction) {
                 const docRef = doc(db, "users", user.uid, "transactions", editingTransaction.id);
                 await updateDoc(docRef, transactionDataForFirestore);
                 
@@ -129,11 +131,7 @@ export default function DashboardPage() {
                         t.id === editingTransaction.id ? updatedTransaction : t
                     )
                 );
-            } catch (error) {
-                console.error("Error updating transaction: ", error);
-            }
-        } else {
-            try {
+            } else {
                 const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transactionDataForFirestore);
                 const newTransaction: Transaction = {
                     id: docRef.id,
@@ -142,10 +140,11 @@ export default function DashboardPage() {
                     date: new Date(data.date),
                 };
                 setTransactions(prev => [newTransaction, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
-            } catch (error) {
-                console.error("Error adding transaction: ", error);
             }
+        } catch (error) {
+            console.error("Error saving transaction: ", error);
         }
+        
         setIsSheetOpen(false);
         setEditingTransaction(null);
     };
@@ -188,12 +187,12 @@ export default function DashboardPage() {
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (loading || (!user && !loading)) {
+    if (loading || isLoadingData) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
-    if (isLoadingData) {
-        return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
+    if (!user) {
+         return <div className="flex min-h-screen w-full items-center justify-center">Redirecting to login...</div>;
     }
 
 
@@ -249,7 +248,7 @@ export default function DashboardPage() {
                 setIsSheetOpen(open);
                 if (!open) setEditingTransaction(null);
             }}>
-                <SheetContent className="sm:max-w-lg w-[90vw]">
+                <SheetContent className="sm:max-w-lg w-[90vw] overflow-y-auto">
                      <SheetHeader className="pb-4">
                         <SheetTitle>{sheetTitle}</SheetTitle>
                         <SheetDescription>{sheetDescription}</SheetDescription>
@@ -261,7 +260,8 @@ export default function DashboardPage() {
                         initialData={editingTransaction}
                         defaultType={sheetMode.type}
                     >
-                        <SheetFooter className="mt-6">
+                         <SheetFooter className="mt-6">
+                            <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
                             <Button type="submit">Save changes</Button>
                         </SheetFooter>
                     </TransactionForm>

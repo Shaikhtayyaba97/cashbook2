@@ -21,10 +21,9 @@ export type TransactionType = "cash-in" | "cash-out";
 
 const formSchema = z.object({
   type: z.enum(["cash-in", "cash-out"], { required_error: "You need to select a transaction type." }),
-  amount: z.preprocess(
-    (val) => (val === "" ? undefined : Number(val)),
-    z.number({ required_error: "Amount is required." }).positive({ message: "Amount must be positive." })
-  ),
+  amount: z.string().min(1, { message: "Amount is required." }).refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+    message: "Amount must be a positive number.",
+  }),
   date: z.date({ required_error: "A date is required." }),
   description: z.string().min(1, { message: "Description cannot be empty." }).max(100, { message: "Description is too long." }),
 });
@@ -41,19 +40,19 @@ interface TransactionFormProps {
 export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in", children }: TransactionFormProps) {
   const form = useForm<TransactionFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData
-      ? { ...initialData, date: new Date(initialData.date) }
-      : {
-          type: defaultType,
-          amount: '' as any, // Use empty string for controlled input
-          date: new Date(),
-          description: "",
-        },
+    defaultValues: {
+      type: initialData?.type ?? defaultType,
+      amount: initialData?.amount ? String(initialData.amount) : "",
+      date: initialData?.date ? new Date(initialData.date) : new Date(),
+      description: initialData?.description ?? "",
+    },
   });
+
+  const formId = React.useId();
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="type"
@@ -149,7 +148,26 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
           )}
         />
         
-        {children}
+        {React.Children.map(children, child => {
+          if (React.isValidElement(child) && child.type === React.Fragment) {
+              return child;
+          }
+          if (React.isValidElement(child)) {
+            // @ts-ignore
+            if (child.type?.displayName === 'SheetFooter') {
+                 return React.cloneElement(child, {
+                    // @ts-ignore
+                    children: React.Children.map(child.props.children, (button: React.ReactElement) => {
+                        if (button.props.type === 'submit') {
+                            return React.cloneElement(button, { form: formId });
+                        }
+                        return button;
+                    })
+                 })
+            }
+          }
+          return child;
+        })}
       </form>
     </Form>
   );
