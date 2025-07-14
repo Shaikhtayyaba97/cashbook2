@@ -54,6 +54,8 @@ export default function DashboardPage() {
 
     // Save transactions to localStorage whenever they change
     useEffect(() => {
+        // We don't save during the initial load
+        if (isLoading) return;
         try {
             // Sort transactions by date descending before saving
             const sortedTransactions = [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -62,7 +64,7 @@ export default function DashboardPage() {
         } catch (error) {
             console.error("Failed to save transactions to local storage:", error);
         }
-    }, [transactions]);
+    }, [transactions, isLoading]);
 
     const [filterMonth, setFilterMonth] = useState<string>('All Months');
     const [filterType, setFilterType] = useState<"all" | TransactionType>("all");
@@ -231,7 +233,7 @@ export default function DashboardPage() {
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             This action cannot be undone. This will permanently delete the transaction record.
-                        </AlertDialogDescription>
+                        </Description>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
