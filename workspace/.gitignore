@@ -31,4 +31,11 @@ yarn-error.log*
 .env.production.local
 
 # firebase credentials
-src/lib/firebase.ts
+/src/lib/firebase.ts
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
