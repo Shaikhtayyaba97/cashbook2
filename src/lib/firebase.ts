@@ -4,16 +4,17 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // IMPORTANT:
-// 1. Paste your Firebase configuration object below.
-// 2. This file is in .gitignore, so your keys will NOT be stored in git.
+// Your Firebase configuration is below.
+// This file is in .gitignore, so your keys will NOT be stored in git.
 
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY_HERE",
-  authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
-  projectId: "PASTE_YOUR_PROJECT_ID_HERE",
-  storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "PASTE_YOUR_APP_ID_HERE"
+  apiKey: "AIzaSyBoKHz6-5prkpltXQbka9WKpnzh6BvmMvA",
+  authDomain: "cashbook-6531f.firebaseapp.com",
+  projectId: "cashbook-6531f",
+  storageBucket: "cashbook-6531f.firebasestorage.app",
+  messagingSenderId: "730218432910",
+  appId: "1:730218432910:web:a7a61f598474d911fafcdf",
+  measurementId: "G-RRT60JJ5GK"
 };
 
 // Initialize Firebase
