@@ -3,8 +3,9 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
+import { useCollection } from 'react-firebase-hooks/firestore';
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, Timestamp, query, where, orderBy } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp, query, orderBy } from "firebase/firestore";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -32,9 +33,25 @@ const getLast12Months = () => {
 
 export default function DashboardPage() {
     const router = useRouter();
-    const [user, loading] = useAuthState(auth);
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [user, authLoading] = useAuthState(auth);
+
+    // Real-time listener for transactions
+    const [snapshot, collectionLoading, collectionError] = useCollection(
+        user ? query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc")) : null
+    );
+
+    const transactions = useMemo(() => {
+        if (!snapshot) return [];
+        return snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                date: (data.date as Timestamp).toDate(),
+            } as Transaction;
+        });
+    }, [snapshot]);
+
 
     const [filterMonth, setFilterMonth] = useState<string>(
         new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
@@ -46,39 +63,10 @@ export default function DashboardPage() {
     const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!loading && !user) {
+        if (!authLoading && !user) {
             router.push('/login');
         }
-    }, [user, loading, router]);
-    
-    useEffect(() => {
-        if (user) {
-            const fetchTransactions = async () => {
-                setIsLoadingData(true);
-                const q = query(
-                    collection(db, "users", user.uid, "transactions"), 
-                    orderBy("date", "desc")
-                );
-                const querySnapshot = await getDocs(q);
-                const fetchedTransactions: Transaction[] = [];
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    fetchedTransactions.push({
-                        id: doc.id,
-                        ...data,
-                        date: (data.date as Timestamp).toDate(),
-                    } as Transaction);
-                });
-                setTransactions(fetchedTransactions);
-                setIsLoadingData(false);
-            };
-
-            fetchTransactions();
-        } else if (!loading) {
-            setIsLoadingData(false);
-        }
-    }, [user, loading]);
-
+    }, [user, authLoading, router]);
 
     const handleAddTransaction = (type: TransactionType) => {
         setEditingTransaction(null);
@@ -96,7 +84,6 @@ export default function DashboardPage() {
         if (deletingTransactionId && user) {
             try {
                 await deleteDoc(doc(db, "users", user.uid, "transactions", deletingTransactionId));
-                setTransactions(prev => prev.filter(t => t.id !== deletingTransactionId));
             } catch (error) {
                 console.error("Error deleting transaction: ", error);
             } finally {
@@ -118,28 +105,8 @@ export default function DashboardPage() {
             if (editingTransaction) {
                 const docRef = doc(db, "users", user.uid, "transactions", editingTransaction.id);
                 await updateDoc(docRef, transactionDataForFirestore);
-                
-                const updatedTransaction: Transaction = {
-                    id: editingTransaction.id,
-                    ...data,
-                    amount: Number(data.amount),
-                    date: data.date
-                };
-
-                setTransactions(prev =>
-                    prev.map(t =>
-                        t.id === editingTransaction.id ? updatedTransaction : t
-                    ).sort((a, b) => b.date.getTime() - a.date.getTime())
-                );
             } else {
-                const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transactionDataForFirestore);
-                const newTransaction: Transaction = {
-                    id: docRef.id,
-                    ...data,
-                    amount: Number(data.amount),
-                    date: data.date,
-                };
-                setTransactions(prev => [newTransaction, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
+                await addDoc(collection(db, "users", user.uid, "transactions"), transactionDataForFirestore);
             }
         } catch (error) {
             console.error("Error saving transaction: ", error);
@@ -187,12 +154,16 @@ export default function DashboardPage() {
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (loading || (!user && !loading) || isLoadingData) {
+    if (authLoading || collectionLoading) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
     if (!user) {
          return <div className="flex min-h-screen w-full items-center justify-center">Redirecting to login...</div>;
+    }
+
+    if(collectionError) {
+        return <div className="flex min-h-screen w-full items-center justify-center">Error: {collectionError.message}</div>;
     }
 
 
