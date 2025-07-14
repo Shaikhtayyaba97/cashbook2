@@ -40,7 +40,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
       ? { ...initialData, date: new Date(initialData.date) }
       : {
           type: defaultType,
-          amount: undefined,
+          amount: '' as any, // Initialize with empty string to prevent uncontrolled -> controlled error
           date: new Date(),
           description: "",
         },
@@ -147,5 +147,3 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
     </Form>
   );
 }
-
-    
