@@ -1,24 +1,23 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth.tsx";
+import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid';
+import { db } from "@/lib/firebase";
+import { collection, addDoc, updateDoc, deleteDoc, doc, Timestamp, onSnapshot, query, orderBy } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 import { Header } from "@/components/header";
 import { SummaryCards } from "@/components/summary-cards";
 import { TransactionTable } from "@/components/transaction-table";
 import { TransactionForm, type TransactionFormValues, type TransactionType } from "@/components/transaction-form";
 import type { Transaction } from "@/lib/types";
 
-const LOCAL_STORAGE_KEY = 'ledgerlite-transactions';
-
-// Helper to get the last 12 months
 const getLast12Months = () => {
     const months = [];
     const currentDate = new Date();
@@ -30,41 +29,41 @@ const getLast12Months = () => {
 };
 
 export default function DashboardPage() {
+    const { user, loading: authLoading } = useAuth();
+    const router = useRouter();
+
     const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // Load transactions from localStorage on initial render
+    const [loading, setLoading] = useState(true);
+    
     useEffect(() => {
-        try {
-            const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY);
-            if (storedTransactions) {
-                const parsedTransactions = JSON.parse(storedTransactions);
-                // Convert date strings back to Date objects
-                const transactionsWithDates = parsedTransactions.map((t: any) => ({
-                    ...t,
-                    date: new Date(t.date),
-                }));
-                setTransactions(transactionsWithDates);
-            }
-        } catch (error) {
-            console.error("Failed to load transactions from local storage:", error);
+        if (!authLoading && !user) {
+            router.push('/login');
         }
-        setIsLoading(false);
-    }, []);
-
-    // Save transactions to localStorage whenever they change
+    }, [user, authLoading, router]);
+    
     useEffect(() => {
-        // We don't save during the initial load
-        if (isLoading) return;
-        try {
-            // Sort transactions by date descending before saving
-            const sortedTransactions = [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime());
-            const dataToStore = JSON.stringify(sortedTransactions);
-            localStorage.setItem(LOCAL_STORAGE_KEY, dataToStore);
-        } catch (error) {
-            console.error("Failed to save transactions to local storage:", error);
+        if (user) {
+            setLoading(true);
+            const q = query(collection(db, 'users', user.uid, 'transactions'), orderBy('date', 'desc'));
+            const unsubscribe = onSnapshot(q, (querySnapshot) => {
+                const transactionsData = querySnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        date: (data.date as Timestamp).toDate(),
+                    } as Transaction;
+                });
+                setTransactions(transactionsData);
+                setLoading(false);
+            }, (error) => {
+                console.error("Error fetching transactions:", error);
+                setLoading(false);
+            });
+
+            return () => unsubscribe();
         }
-    }, [transactions, isLoading]);
+    }, [user]);
 
     const [filterMonth, setFilterMonth] = useState<string>('All Months');
     const [filterType, setFilterType] = useState<"all" | TransactionType>("all");
@@ -85,30 +84,37 @@ export default function DashboardPage() {
         setIsSheetOpen(true);
     };
     
-    const handleDeleteConfirm = () => {
-        if (deletingTransactionId) {
-            setTransactions(transactions.filter(t => t.id !== deletingTransactionId));
-            setDeletingTransactionId(null);
+    const handleDeleteConfirm = async () => {
+        if (deletingTransactionId && user) {
+            try {
+                await deleteDoc(doc(db, 'users', user.uid, 'transactions', deletingTransactionId));
+                setDeletingTransactionId(null);
+            } catch (e) {
+                console.error("Error deleting document: ", e);
+            }
         }
     };
 
-    const handleSaveTransaction = (data: TransactionFormValues) => {
-        if (editingTransaction) {
-            // Update existing transaction
-            setTransactions(transactions.map(t => 
-                t.id === editingTransaction.id ? { ...editingTransaction, ...data } : t
-            ));
-        } else {
-            // Add new transaction
-            const newTransaction: Transaction = {
-                id: uuidv4(),
-                ...data,
-            };
-            setTransactions([...transactions, newTransaction]);
+    const handleSaveTransaction = async (data: TransactionFormValues) => {
+        if (!user) return;
+
+        const transactionData = {
+            ...data,
+            date: Timestamp.fromDate(data.date),
+        };
+
+        try {
+            if (editingTransaction) {
+                const docRef = doc(db, 'users', user.uid, 'transactions', editingTransaction.id);
+                await updateDoc(docRef, transactionData);
+            } else {
+                await addDoc(collection(db, 'users', user.uid, 'transactions'), transactionData);
+            }
+            setIsSheetOpen(false);
+            setEditingTransaction(null);
+        } catch (e) {
+            console.error("Error saving document: ", e);
         }
-        
-        setIsSheetOpen(false);
-        setEditingTransaction(null);
     };
 
     const availableMonths = useMemo(() => {
@@ -116,17 +122,12 @@ export default function DashboardPage() {
         months.unshift('All Months');
         return months;
     }, []);
-    
-    const sortedTransactions = useMemo(() => {
-         return [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime());
-    }, [transactions]);
-
 
     const filteredTransactions = useMemo(() => {
-        let monthFiltered = sortedTransactions;
+        let monthFiltered = transactions;
 
         if (filterMonth !== 'All Months') {
-            monthFiltered = sortedTransactions.filter(t => {
+            monthFiltered = transactions.filter(t => {
                 const monthYear = new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' });
                 return monthYear === filterMonth;
             });
@@ -138,23 +139,22 @@ export default function DashboardPage() {
 
         return monthFiltered.filter(t => t.type === filterType);
 
-    }, [sortedTransactions, filterMonth, filterType]);
+    }, [transactions, filterMonth, filterType]);
 
     const summaryTransactions = useMemo(() => {
          if (filterMonth === 'All Months') {
-            return sortedTransactions;
+            return transactions;
          }
-         return sortedTransactions.filter(t => {
+         return transactions.filter(t => {
             const monthYear = new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' });
             return monthYear === filterMonth;
         });
-    }, [sortedTransactions, filterMonth]);
+    }, [transactions, filterMonth]);
     
     const sheetTitle = sheetMode.editing ? "Edit Transaction" : (sheetMode.type === 'cash-in' ? 'Add Cash In' : 'Add Cash Out');
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
-
-    if (isLoading) {
+    if (authLoading || loading) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
