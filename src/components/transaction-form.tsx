@@ -21,7 +21,10 @@ export type TransactionType = "cash-in" | "cash-out";
 
 const formSchema = z.object({
   type: z.enum(["cash-in", "cash-out"], { required_error: "You need to select a transaction type." }),
-  amount: z.coerce.number().positive({ message: "Amount must be positive." }),
+  amount: z.preprocess(
+    (val) => (val === "" ? undefined : Number(val)),
+    z.number({ required_error: "Amount is required." }).positive({ message: "Amount must be positive." })
+  ),
   date: z.date({ required_error: "A date is required." }),
   description: z.string().min(1, { message: "Description cannot be empty." }).max(100, { message: "Description is too long." }),
 });
@@ -42,7 +45,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
       ? { ...initialData, date: new Date(initialData.date) }
       : {
           type: defaultType,
-          amount: undefined, // Fix: Initialize with undefined instead of empty string
+          amount: '' as any, // Use empty string for controlled input
           date: new Date(),
           description: "",
         },
@@ -89,7 +92,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
             <FormItem>
               <FormLabel>Amount</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="0.00" {...field} onChange={event => field.onChange(+event.target.value)} />
+                <Input type="number" placeholder="0.00" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
