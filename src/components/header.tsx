@@ -5,14 +5,12 @@ import { LogOut } from 'lucide-react';
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 
-const LOCAL_STORAGE_KEY = 'ledgerlite-transactions';
-
 export function Header() {
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem(LOCAL_STORAGE_KEY);
-    router.push('/');
+    // Do not remove data from local storage
+    router.push('/login');
   };
 
   return (

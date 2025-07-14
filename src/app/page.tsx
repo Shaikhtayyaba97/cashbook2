@@ -7,8 +7,8 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // The app is now local-first, redirect directly to the dashboard.
-    router.replace('/dashboard');
+    // Redirect to login page instead of dashboard
+    router.replace('/login');
   }, [router]);
 
   return (
