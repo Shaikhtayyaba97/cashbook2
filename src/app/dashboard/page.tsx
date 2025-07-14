@@ -111,7 +111,7 @@ export default function DashboardPage() {
         const transactionDataForFirestore = {
             ...data,
             amount: Number(data.amount),
-            date: Timestamp.fromDate(new Date(data.date)),
+            date: Timestamp.fromDate(data.date),
         };
 
         try {
@@ -123,13 +123,13 @@ export default function DashboardPage() {
                     id: editingTransaction.id,
                     ...data,
                     amount: Number(data.amount),
-                    date: new Date(data.date)
+                    date: data.date
                 };
 
                 setTransactions(prev =>
                     prev.map(t =>
                         t.id === editingTransaction.id ? updatedTransaction : t
-                    )
+                    ).sort((a, b) => b.date.getTime() - a.date.getTime())
                 );
             } else {
                 const docRef = await addDoc(collection(db, "users", user.uid, "transactions"), transactionDataForFirestore);
@@ -137,7 +137,7 @@ export default function DashboardPage() {
                     id: docRef.id,
                     ...data,
                     amount: Number(data.amount),
-                    date: new Date(data.date),
+                    date: data.date,
                 };
                 setTransactions(prev => [newTransaction, ...prev].sort((a, b) => b.date.getTime() - a.date.getTime()));
             }
@@ -187,7 +187,7 @@ export default function DashboardPage() {
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (loading || isLoadingData) {
+    if (loading) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
@@ -259,12 +259,8 @@ export default function DashboardPage() {
                         onSubmit={handleSaveTransaction}
                         initialData={editingTransaction}
                         defaultType={sheetMode.type}
-                    >
-                         <SheetFooter className="mt-6">
-                            <Button type="button" variant="ghost" onClick={() => setIsSheetOpen(false)}>Cancel</Button>
-                            <Button type="submit">Save changes</Button>
-                        </SheetFooter>
-                    </TransactionForm>
+                        onCancel={() => setIsSheetOpen(false)}
+                    />
                 </SheetContent>
             </Sheet>
 
