@@ -1,15 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { useCollection } from 'react-firebase-hooks/firestore';
-import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, deleteDoc, doc, updateDoc, Timestamp, query, orderBy } from "firebase/firestore";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
+import { v4 as uuidv4 } from 'uuid';
 
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +15,8 @@ import { SummaryCards } from "@/components/summary-cards";
 import { TransactionTable } from "@/components/transaction-table";
 import { TransactionForm, type TransactionFormValues, type TransactionType } from "@/components/transaction-form";
 import type { Transaction } from "@/lib/types";
+
+const LOCAL_STORAGE_KEY = 'ledgerlite-transactions';
 
 // Helper to get the last 12 months
 const getLast12Months = () => {
@@ -32,41 +30,46 @@ const getLast12Months = () => {
 };
 
 export default function DashboardPage() {
-    const router = useRouter();
-    const [user, authLoading] = useAuthState(auth);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    // Real-time listener for transactions
-    const [snapshot, collectionLoading, collectionError] = useCollection(
-        user ? query(collection(db, "users", user.uid, "transactions"), orderBy("date", "desc")) : null
-    );
+    // Load transactions from localStorage on initial render
+    useEffect(() => {
+        try {
+            const storedTransactions = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (storedTransactions) {
+                const parsedTransactions = JSON.parse(storedTransactions);
+                // Convert date strings back to Date objects
+                const transactionsWithDates = parsedTransactions.map((t: any) => ({
+                    ...t,
+                    date: new Date(t.date),
+                }));
+                setTransactions(transactionsWithDates);
+            }
+        } catch (error) {
+            console.error("Failed to load transactions from local storage:", error);
+        }
+        setIsLoading(false);
+    }, []);
 
-    const transactions = useMemo(() => {
-        if (!snapshot) return [];
-        return snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                date: (data.date as Timestamp).toDate(),
-            } as Transaction;
-        });
-    }, [snapshot]);
+    // Save transactions to localStorage whenever they change
+    useEffect(() => {
+        try {
+            // Sort transactions by date descending before saving
+            const sortedTransactions = [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime());
+            const dataToStore = JSON.stringify(sortedTransactions);
+            localStorage.setItem(LOCAL_STORAGE_KEY, dataToStore);
+        } catch (error) {
+            console.error("Failed to save transactions to local storage:", error);
+        }
+    }, [transactions]);
 
-
-    const [filterMonth, setFilterMonth] = useState<string>(
-        new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
-    );
+    const [filterMonth, setFilterMonth] = useState<string>('All Months');
     const [filterType, setFilterType] = useState<"all" | TransactionType>("all");
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const [sheetMode, setSheetMode] = useState<{ type: TransactionType, editing: boolean }>({ type: 'cash-in', editing: false });
     const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
     const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!authLoading && !user) {
-            router.push('/login');
-        }
-    }, [user, authLoading, router]);
 
     const handleAddTransaction = (type: TransactionType) => {
         setEditingTransaction(null);
@@ -79,37 +82,27 @@ export default function DashboardPage() {
         setSheetMode({ type: transaction.type, editing: true });
         setIsSheetOpen(true);
     };
-
+    
     const handleDeleteConfirm = async () => {
-        if (deletingTransactionId && user) {
-            try {
-                await deleteDoc(doc(db, "users", user.uid, "transactions", deletingTransactionId));
-            } catch (error) {
-                console.error("Error deleting transaction: ", error);
-            } finally {
-                setDeletingTransactionId(null);
-            }
+        if (deletingTransactionId) {
+            setTransactions(transactions.filter(t => t.id !== deletingTransactionId));
+            setDeletingTransactionId(null);
         }
     };
 
     const handleSaveTransaction = async (data: TransactionFormValues) => {
-        if (!user) return;
-        
-        const transactionDataForFirestore = {
-            ...data,
-            amount: Number(data.amount),
-            date: Timestamp.fromDate(data.date),
-        };
-
-        try {
-            if (editingTransaction) {
-                const docRef = doc(db, "users", user.uid, "transactions", editingTransaction.id);
-                await updateDoc(docRef, transactionDataForFirestore);
-            } else {
-                await addDoc(collection(db, "users", user.uid, "transactions"), transactionDataForFirestore);
-            }
-        } catch (error) {
-            console.error("Error saving transaction: ", error);
+        if (editingTransaction) {
+            // Update existing transaction
+            setTransactions(transactions.map(t => 
+                t.id === editingTransaction.id ? { ...editingTransaction, ...data } : t
+            ));
+        } else {
+            // Add new transaction
+            const newTransaction: Transaction = {
+                id: uuidv4(),
+                ...data,
+            };
+            setTransactions([...transactions, newTransaction]);
         }
         
         setIsSheetOpen(false);
@@ -121,12 +114,17 @@ export default function DashboardPage() {
         months.unshift('All Months');
         return months;
     }, []);
+    
+    const sortedTransactions = useMemo(() => {
+         return [...transactions].sort((a, b) => b.date.getTime() - a.date.getTime());
+    }, [transactions]);
+
 
     const filteredTransactions = useMemo(() => {
-        let monthFiltered = transactions;
+        let monthFiltered = sortedTransactions;
 
         if (filterMonth !== 'All Months') {
-            monthFiltered = transactions.filter(t => {
+            monthFiltered = sortedTransactions.filter(t => {
                 const monthYear = new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' });
                 return monthYear === filterMonth;
             });
@@ -138,35 +136,26 @@ export default function DashboardPage() {
 
         return monthFiltered.filter(t => t.type === filterType);
 
-    }, [transactions, filterMonth, filterType]);
+    }, [sortedTransactions, filterMonth, filterType]);
 
     const summaryTransactions = useMemo(() => {
          if (filterMonth === 'All Months') {
-            return transactions;
+            return sortedTransactions;
          }
-         return transactions.filter(t => {
+         return sortedTransactions.filter(t => {
             const monthYear = new Date(t.date).toLocaleString('default', { month: 'long', year: 'numeric' });
             return monthYear === filterMonth;
         });
-    }, [transactions, filterMonth]);
+    }, [sortedTransactions, filterMonth]);
     
     const sheetTitle = sheetMode.editing ? "Edit Transaction" : (sheetMode.type === 'cash-in' ? 'Add Cash In' : 'Add Cash Out');
     const sheetDescription = sheetMode.editing ? "Update the details of your transaction." : `Add a new ${sheetMode.type === 'cash-in' ? 'income' : 'expense'} entry.`;
 
 
-    if (authLoading || collectionLoading) {
+    if (isLoading) {
         return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
     }
     
-    if (!user) {
-         return <div className="flex min-h-screen w-full items-center justify-center">Redirecting to login...</div>;
-    }
-
-    if(collectionError) {
-        return <div className="flex min-h-screen w-full items-center justify-center">Error: {collectionError.message}</div>;
-    }
-
-
     return (
         <div className="flex min-h-screen w-full flex-col bg-muted/40">
             <Header />
