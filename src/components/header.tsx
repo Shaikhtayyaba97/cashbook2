@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +15,13 @@ import { Logo } from "@/components/logo";
 import Link from "next/link";
 
 export function Header() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('loggedInUser');
+    router.push('/login');
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
       <div className="container mx-auto flex h-16 items-center justify-between px-0">
@@ -32,8 +42,8 @@ export function Header() {
             <DropdownMenuItem>Profile</DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link href="/login">Logout</Link>
+            <DropdownMenuItem onClick={handleLogout}>
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

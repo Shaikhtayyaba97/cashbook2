@@ -37,7 +37,7 @@ export function TransactionForm({ onSubmit, initialData }: TransactionFormProps)
       ? { ...initialData, date: new Date(initialData.date) }
       : {
           type: "cash-in",
-          amount: 0,
+          amount: undefined,
           date: new Date(),
           description: "",
         },
