@@ -42,7 +42,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
       ? { ...initialData, date: new Date(initialData.date) }
       : {
           type: defaultType,
-          amount: '' as any, // Initialize with empty string to prevent uncontrolled -> controlled error
+          amount: undefined, // Fix: Initialize with undefined instead of empty string
           date: new Date(),
           description: "",
         },
@@ -89,7 +89,7 @@ export function TransactionForm({ onSubmit, initialData, defaultType = "cash-in"
             <FormItem>
               <FormLabel>Amount</FormLabel>
               <FormControl>
-                <Input type="number" placeholder="0.00" {...field} />
+                <Input type="number" placeholder="0.00" {...field} onChange={event => field.onChange(+event.target.value)} />
               </FormControl>
               <FormMessage />
             </FormItem>
