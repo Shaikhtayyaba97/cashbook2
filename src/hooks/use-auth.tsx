@@ -47,6 +47,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userDoc.exists()) {
                 setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
             } else {
+                // This case can happen if the user doc creation failed after signup
+                // Or if they were authenticated but their doc was deleted.
+                // For this app's logic, we treat them as not fully logged in.
                 setUser(null);
             }
         } else {
@@ -68,16 +71,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, formatEmail(phone), password);
     const firebaseUser = userCredential.user;
 
+    // Create the user document in Firestore
     const userDocRef = doc(db, "users", firebaseUser.uid);
     await setDoc(userDocRef, {
+        uid: firebaseUser.uid,
         phone: phone,
         createdAt: Timestamp.now(),
     });
     
-    const userDoc = await getDoc(userDocRef);
-    if(userDoc.exists()){
-        setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
-    }
+    // Set the user state immediately after successful doc creation
+    setUser({ uid: firebaseUser.uid, phone: phone });
   };
 
   const logout = async () => {
