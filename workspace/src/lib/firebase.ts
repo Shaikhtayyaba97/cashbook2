@@ -1,25 +1,33 @@
 // Import the functions you need from the SDKs you need
-import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
-// IMPORTANT:
-// Your Firebase configuration is below.
-// This file is in .gitignore, so your keys will NOT be stored in git.
-
+//
+// IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE
+//
+// You can get this from the Firebase Console:
+// Project settings > General > Your apps > Web app > SDK setup and configuration
+//
 const firebaseConfig = {
-  apiKey: "AIzaSyA2xq5k_a1Z-rQ8_P0V-TqN4yZ-U8A-j7s",
-  authDomain: "ledgerlite-app.firebaseapp.com",
-  projectId: "ledgerlite-app",
-  storageBucket: "ledgerlite-app.appspot.com",
-  messagingSenderId: "1008272115682",
-  appId: "1:1008272115682:web:1e5f2e3a4b6c8d7e6f5a43"
+  apiKey: "YOUR_API_KEY", // Replace with your key
+  authDomain: "YOUR_AUTH_DOMAIN", // Replace with your domain
+  projectId: "YOUR_PROJECT_ID", // Replace with your ID
+  storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your bucket
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your sender ID
+  appId: "YOUR_APP_ID" // Replace with your App ID
 };
 
+// This singleton pattern ensures Firebase is initialized only once.
+const getFirebaseApp = (): FirebaseApp => {
+  if (!getApps().length) {
+    return initializeApp(firebaseConfig);
+  }
+  return getApp();
+};
 
-// Initialize Firebase
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const app: FirebaseApp = getFirebaseApp();
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 
 export { app, auth, db };
