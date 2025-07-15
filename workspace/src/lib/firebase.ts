@@ -1,13 +1,10 @@
-// Import the functions you need from the SDKs you need
-import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
+// src/lib/firebase.ts
+import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
 //
 // IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE
-//
-// You can get this from the Firebase Console:
-// Project settings > General > Your apps > Web app > SDK setup and configuration
 //
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY", // Replace with your key
@@ -18,7 +15,7 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID" // Replace with your App ID
 };
 
-// This singleton pattern ensures Firebase is initialized only once.
+// This function ensures Firebase is initialized only once
 const getFirebaseApp = (): FirebaseApp => {
   if (!getApps().length) {
     return initializeApp(firebaseConfig);
@@ -26,8 +23,11 @@ const getFirebaseApp = (): FirebaseApp => {
   return getApp();
 };
 
-const app: FirebaseApp = getFirebaseApp();
-const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
+const app = getFirebaseApp();
 
-export { app, auth, db };
+// Functions to get the auth and firestore services
+// This "lazy" approach ensures the app is initialized before the services are used.
+const getFirebaseAuth = (): Auth => getAuth(app);
+const getFirebaseDb = (): Firestore => getFirestore(app);
+
+export { app, getFirebaseAuth, getFirebaseDb };
