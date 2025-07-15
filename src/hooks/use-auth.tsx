@@ -48,6 +48,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userDoc.exists()) {
                 setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
             } else {
+                // This can happen if the user is authenticated but their doc doesn't exist yet.
+                // Or if there was an error during signup.
+                // For now, we'll treat them as logged out.
                 setUser(null);
             }
         } else {
@@ -75,6 +78,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: Timestamp.now(),
     });
     
+    // After creating the doc, we can assume the user is set by onAuthStateChanged,
+    // but for immediate UI update, we can set it here too.
     const userDoc = await getDoc(userDocRef);
     if(userDoc.exists()){
         setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
