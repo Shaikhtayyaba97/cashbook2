@@ -47,9 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userDoc.exists()) {
                 setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
             } else {
-                // This case can happen if the user doc creation failed after signup
-                // Or if they were authenticated but their doc was deleted.
-                // For this app's logic, we treat them as not fully logged in.
                 setUser(null);
             }
         } else {
@@ -63,7 +60,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (phone: string, password?: string) => {
     if (!password) throw new Error("Password is required.");
-    await signInWithEmailAndPassword(auth, formatEmail(phone), password);
+    const userCredential = await signInWithEmailAndPassword(auth, formatEmail(phone), password);
+    const firebaseUser = userCredential.user;
+
+    // After signing in, explicitly fetch the user document to ensure the user state is set.
+    // This prevents a race condition where the redirect happens before onAuthStateChanged completes.
+    const userDocRef = doc(db, "users", firebaseUser.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+        setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
+    } else {
+        // If the doc doesn't exist for some reason, sign them out to prevent a broken state.
+        await signOut(auth);
+        throw new Error("User data not found. Please contact support.");
+    }
   };
 
   const signup = async (phone: string, password?: string) => {
