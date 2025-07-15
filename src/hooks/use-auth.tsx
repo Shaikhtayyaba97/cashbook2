@@ -47,7 +47,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userDoc.exists()) {
                 setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
             } else {
-                setUser(null);
+                // This might happen briefly during signup, so we don't null out the user here.
+                // If login fails, the login function will handle the error.
             }
         } else {
             setUser(null);
@@ -63,14 +64,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await signInWithEmailAndPassword(auth, formatEmail(phone), password);
     const firebaseUser = userCredential.user;
 
-    // After signing in, explicitly fetch the user document to ensure the user state is set.
-    // This prevents a race condition where the redirect happens before onAuthStateChanged completes.
     const userDocRef = doc(db, "users", firebaseUser.uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
         setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
     } else {
-        // If the doc doesn't exist for some reason, sign them out to prevent a broken state.
         await signOut(auth);
         throw new Error("User data not found. Please contact support.");
     }
@@ -81,15 +79,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, formatEmail(phone), password);
     const firebaseUser = userCredential.user;
 
-    // Create the user document in Firestore
     const userDocRef = doc(db, "users", firebaseUser.uid);
+    // This `await` is crucial to ensure the document is created before proceeding.
     await setDoc(userDocRef, {
         uid: firebaseUser.uid,
         phone: phone,
         createdAt: Timestamp.now(),
     });
     
-    // Set the user state immediately after successful doc creation
+    // Set the user state only after the doc is successfully created.
     setUser({ uid: firebaseUser.uid, phone: phone });
   };
 
