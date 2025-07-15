@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
-import { db } from "@/lib/firebase";
+import { db } from "@/lib/firebase-client";
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
 

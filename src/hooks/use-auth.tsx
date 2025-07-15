@@ -10,7 +10,7 @@ import {
     type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase-client';
 
 interface User {
   uid: string;
@@ -47,9 +47,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userDoc.exists()) {
                 setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
             } else {
-                // This case can happen if the user record in auth exists but not in firestore.
-                // For this app's logic, we should probably log them out or handle it.
-                // For now, setting user to null is safest.
                 setUser(null);
             }
         } else {
@@ -77,7 +74,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         createdAt: Timestamp.now(),
     });
     
-    // After setting the doc, update the local user state
     const userDoc = await getDoc(userDocRef);
     if(userDoc.exists()){
         setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
