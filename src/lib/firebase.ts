@@ -8,12 +8,12 @@ import { getFirestore } from "firebase/firestore";
 // This file is in .gitignore, so your keys will NOT be stored in git.
 
 const firebaseConfig = {
-  apiKey: "AIzaSyA2xq5k_a1Z-rQ8_P0V-TqN4yZ-U8A-j7s",
-  authDomain: "ledgerlite-app.firebaseapp.com",
-  projectId: "ledgerlite-app",
-  storageBucket: "ledgerlite-app.appspot.com",
-  messagingSenderId: "1008272115682",
-  appId: "1:1008272115682:web:1e5f2e3a4b6c8d7e6f5a43"
+  apiKey: "AIzaSyC10T9s-aawj92Ncq7T_2-LzQgRDaT2pXQ",
+  authDomain: "ledgerlite-fb-app.firebaseapp.com",
+  projectId: "ledgerlite-fb-app",
+  storageBucket: "ledgerlite-fb-app.appspot.com",
+  messagingSenderId: "37482313663",
+  appId: "1:37482313663:web:0d0b0b8c3a1b2c3d4e5f6a"
 };
 
 
