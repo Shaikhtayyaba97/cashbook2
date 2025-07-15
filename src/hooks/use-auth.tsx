@@ -3,92 +3,88 @@
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { auth, db } from '@/lib/firebase';
+import { 
+    onAuthStateChanged, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    signOut,
+    type User as FirebaseUser
+} from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+
 
 interface User {
+  uid: string;
   phone: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (phone: string, password?: string) => boolean;
-  signup: (phone: string, password?: string) => boolean;
-  logout: () => void;
+  login: (phone: string, password?: string) => Promise<void>;
+  signup: (phone: string, password?: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  login: () => false,
-  signup: () => false,
-  logout: () => {},
+  login: async () => {},
+  signup: async () => {},
+  logout: async () => {},
 });
+
+const formatEmail = (phone: string) => `${phone}@ledgerlite.app`;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
+  
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem('currentUser');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-    } catch (error) {
-        console.error("Failed to parse user from local storage", error);
-        setUser(null);
-    } finally {
-      setLoading(false);
-    }
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+        if (firebaseUser) {
+            const userDocRef = doc(db, "users", firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+                setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
+            } else {
+                // This case can happen if the user doc creation failed during signup
+                // Or if the user was deleted from Firestore but not from Auth
+                setUser(null);
+            }
+        } else {
+            setUser(null);
+        }
+        setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (phone: string, password?: string): boolean => {
-    try {
-        const storedUsers = localStorage.getItem('users');
-        const users = storedUsers ? JSON.parse(storedUsers) : {};
-        
-        // In a real app, you'd check the hashed password. Here, we just check for existence.
-        if (users[phone]) {
-            const loggedInUser = { phone };
-            localStorage.setItem('currentUser', JSON.stringify(loggedInUser));
-            setUser(loggedInUser);
-            return true;
-        }
-        return false;
-    } catch (error) {
-        console.error("Login failed", error);
-        return false;
-    }
+  const login = async (phone: string, password?: string) => {
+    if (!password) throw new Error("Password is required.");
+    await signInWithEmailAndPassword(auth, formatEmail(phone), password);
   };
 
-  const signup = (phone: string, password?: string): boolean => {
-    try {
-        const storedUsers = localStorage.getItem('users');
-        const users = storedUsers ? JSON.parse(storedUsers) : {};
-        
-        if (users[phone]) {
-            return false; // User already exists
-        }
-        
-        // In a real app, you would hash the password
-        users[phone] = { password };
-        localStorage.setItem('users', JSON.stringify(users));
+  const signup = async (phone: string, password?: string) => {
+    if (!password) throw new Error("Password is required.");
+    const userCredential = await createUserWithEmailAndPassword(auth, formatEmail(phone), password);
+    const firebaseUser = userCredential.user;
 
-        const newUser = { phone };
-        localStorage.setItem('currentUser', JSON.stringify(newUser));
-        setUser(newUser);
-        return true;
-    } catch (error) {
-        console.error("Signup failed", error);
-        return false;
-    }
+    // Create a document in Firestore for the new user
+    const userDocRef = doc(db, "users", firebaseUser.uid);
+    await setDoc(userDocRef, {
+        phone: phone,
+        createdAt: new Date(),
+    });
+    
+    setUser({ uid: firebaseUser.uid, phone });
   };
 
-  const logout = () => {
-    localStorage.removeItem('currentUser');
+  const logout = async () => {
+    await signOut(auth);
     setUser(null);
-    router.push('/login');
   };
 
   return (

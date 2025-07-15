@@ -40,16 +40,8 @@ export default function SignupPage() {
   const onSubmit = async (data: SignupFormValues) => {
     setIsLoading(true);
     try {
-      const success = signup(data.phone, data.password);
-      if (success) {
-        router.push('/dashboard');
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Sign-up Failed",
-          description: "A user with this phone number already exists.",
-        });
-      }
+      await signup(data.phone, data.password);
+      router.push('/dashboard');
     } catch (error: any) {
        toast({
         variant: "destructive",

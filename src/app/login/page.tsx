@@ -40,16 +40,8 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const success = login(data.phone, data.password);
-      if (success) {
-        router.push('/dashboard');
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Invalid credentials or user not found.",
-        });
-      }
+      await login(data.phone, data.password);
+      router.push('/dashboard');
     } catch (error: any) {
       toast({
         variant: "destructive",

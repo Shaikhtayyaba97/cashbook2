@@ -5,7 +5,9 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
-import { v4 as uuidv4 } from 'uuid';
+import { db } from "@/lib/firebase";
+import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp } from "firebase/firestore";
+import { useCollection } from "react-firebase-hooks/firestore";
 
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -17,6 +19,7 @@ import { SummaryCards } from "@/components/summary-cards";
 import { TransactionTable } from "@/components/transaction-table";
 import { TransactionForm, type TransactionFormValues, type TransactionType } from "@/components/transaction-form";
 import type { Transaction } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
 
 const getLast12Months = () => {
     const months = [];
@@ -31,53 +34,39 @@ const getLast12Months = () => {
 export default function DashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
+    const { toast } = useToast();
 
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
-    const [loading, setLoading] = useState(true);
+    const transactionsRef = user ? collection(db, "users", user.uid, "transactions") : null;
+    const [transactionsSnapshot, loading, error] = useCollection(transactionsRef ? query(transactionsRef, orderBy("date", "desc")) : null);
+
+    const transactions: Transaction[] = useMemo(() => {
+        if (!transactionsSnapshot) return [];
+        return transactionsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                date: (data.date as Timestamp).toDate(),
+            } as Transaction;
+        });
+    }, [transactionsSnapshot]);
     
-    // Redirect if not logged in
     useEffect(() => {
         if (!authLoading && !user) {
             router.push('/login');
         }
     }, [user, authLoading, router]);
+
+    useEffect(() => {
+        if (error) {
+            toast({
+                variant: "destructive",
+                title: "Error loading transactions",
+                description: error.message,
+            });
+        }
+    }, [error, toast]);
     
-    // Load transactions from local storage
-    useEffect(() => {
-        if (user) {
-            setLoading(true);
-            try {
-                const storedTransactions = localStorage.getItem(`transactions_${user.phone}`);
-                if (storedTransactions) {
-                    const parsedTransactions = JSON.parse(storedTransactions).map((t: any) => ({
-                        ...t,
-                        date: new Date(t.date), // Ensure date is a Date object
-                    }));
-                    setTransactions(parsedTransactions);
-                } else {
-                    setTransactions([]);
-                }
-            } catch (error) {
-                console.error("Failed to load transactions from local storage", error);
-                setTransactions([]);
-            } finally {
-                setLoading(false);
-            }
-        }
-    }, [user]);
-
-    // Save transactions to local storage whenever they change
-    useEffect(() => {
-        if (user && !loading) {
-             try {
-                const sortedTransactions = [...transactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                localStorage.setItem(`transactions_${user.phone}`, JSON.stringify(sortedTransactions));
-            } catch (error) {
-                console.error("Failed to save transactions to local storage", error);
-            }
-        }
-    }, [transactions, user, loading]);
-
     const [filterMonth, setFilterMonth] = useState<string>('All Months');
     const [filterType, setFilterType] = useState<"all" | TransactionType>("all");
     const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -98,26 +87,36 @@ export default function DashboardPage() {
     };
     
     const handleDeleteConfirm = async () => {
-        if (deletingTransactionId) {
-            setTransactions(transactions.filter(t => t.id !== deletingTransactionId));
+        if (deletingTransactionId && transactionsRef) {
+            try {
+                await deleteDoc(doc(transactionsRef, deletingTransactionId));
+                toast({ title: "Transaction deleted" });
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Error", description: error.message });
+            }
             setDeletingTransactionId(null);
         }
     };
 
     const handleSaveTransaction = async (data: TransactionFormValues) => {
-        if (editingTransaction) {
-            // Update existing transaction
-            setTransactions(transactions.map(t => t.id === editingTransaction.id ? { ...t, ...data } : t));
-        } else {
-            // Add new transaction
-            const newTransaction: Transaction = {
-                id: uuidv4(), // Generate a unique ID
-                ...data,
-            };
-            setTransactions(prev => [...prev, newTransaction]);
+        if (!transactionsRef) return;
+        try {
+            if (editingTransaction) {
+                const transactionDoc = doc(transactionsRef, editingTransaction.id);
+                await updateDoc(transactionDoc, data);
+                toast({ title: "Transaction updated" });
+            } else {
+                await addDoc(transactionsRef, {
+                    ...data,
+                    createdAt: Timestamp.now(),
+                });
+                toast({ title: "Transaction added" });
+            }
+            setIsSheetOpen(false);
+            setEditingTransaction(null);
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
         }
-        setIsSheetOpen(false);
-        setEditingTransaction(null);
     };
 
     const availableMonths = useMemo(() => {
