@@ -1,33 +1,29 @@
-// Import the functions you need from the SDKs you need
-import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
+// src/lib/firebase.ts
+import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
-// IMPORTANT:
-// PASTE YOUR FIREBASE CONFIGURATION HERE
-// Replace the placeholder values with your actual Firebase project keys.
+//
+// IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE
+//
 const firebaseConfig = {
-  apiKey: "AIzaSyAxJ_Fy06wa8jRZOtOOZg365r1ve84Ri64",
-  authDomain: "ledgerlite-83792.firebaseapp.com",
-  projectId: "ledgerlite-83792",
-  storageBucket: "ledgerlite-83792.firebasestorage.app",
-  messagingSenderId: "77470769911",
-  appId: "1:77470769911:web:698f3e91d48939e66429f2",
+  apiKey: "YOUR_API_KEY", // Replace with your key
+  authDomain: "YOUR_AUTH_DOMAIN", // Replace with your domain
+  projectId: "YOUR_PROJECT_ID", // Replace with your ID
+  storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your bucket
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your sender ID
+  appId: "YOUR_APP_ID" // Replace with your App ID
 };
 
-
-// Initialize Firebase for Singleton Pattern
+// Initialize Firebase
 let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
-
-if (getApps().length) {
-  app = getApp();
-} else {
+if (!getApps().length) {
   app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
 }
 
-auth = getAuth(app);
-db = getFirestore(app);
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 
 export { app, auth, db };

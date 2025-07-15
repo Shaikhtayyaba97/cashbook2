@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { auth, db } from '@/lib/firebase';
 import { 
     onAuthStateChanged, 
     createUserWithEmailAndPassword, 
@@ -11,7 +10,7 @@ import {
     type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
-
+import { auth, db } from '@/lib/firebase';
 
 interface User {
   uid: string;
