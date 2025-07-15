@@ -7,12 +7,12 @@ import { getFirestore, type Firestore } from "firebase/firestore";
 // IMPORTANT: PASTE YOUR FIREBASE CONFIGURATION HERE
 //
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // Replace with your key
-  authDomain: "YOUR_AUTH_DOMAIN", // Replace with your domain
-  projectId: "YOUR_PROJECT_ID", // Replace with your ID
-  storageBucket: "YOUR_STORAGE_BUCKET", // Replace with your bucket
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your sender ID
-  appId: "YOUR_APP_ID" // Replace with your App ID
+  apiKey: "AIzaSyAxJ_Fy06wa8jRZOtOOZg365r1ve84Ri64",
+  authDomain: "ledgerlite-83792.firebaseapp.com",
+  projectId: "ledgerlite-83792",
+  storageBucket: "ledgerlite-83792.firebasestorage.app",
+  messagingSenderId: "77470769911",
+  appId: "1:77470769911:web:698f3e91d48939e66429f2",
 };
 
 
