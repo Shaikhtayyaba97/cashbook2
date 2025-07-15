@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
 import { auth, db } from '@/lib/firebase';
 import { 
     onAuthStateChanged, 
@@ -11,7 +10,7 @@ import {
     signOut,
     type User as FirebaseUser
 } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 
 
 interface User {
@@ -49,8 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userDoc.exists()) {
                 setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
             } else {
-                // This case can happen if the user doc creation failed during signup
-                // Or if the user was deleted from Firestore but not from Auth
                 setUser(null);
             }
         } else {
@@ -72,14 +69,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userCredential = await createUserWithEmailAndPassword(auth, formatEmail(phone), password);
     const firebaseUser = userCredential.user;
 
-    // Create a document in Firestore for the new user
     const userDocRef = doc(db, "users", firebaseUser.uid);
     await setDoc(userDocRef, {
         phone: phone,
-        createdAt: new Date(),
+        createdAt: Timestamp.now(),
     });
     
-    setUser({ uid: firebaseUser.uid, phone });
+    const userDoc = await getDoc(userDocRef);
+    if(userDoc.exists()){
+        setUser({ uid: firebaseUser.uid, phone: userDoc.data().phone });
+    }
   };
 
   const logout = async () => {

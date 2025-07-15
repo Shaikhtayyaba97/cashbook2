@@ -11,12 +11,12 @@ import { getFirestore } from "firebase/firestore";
 // =================================================================================
 
 const firebaseConfig = {
-  // apiKey: "PASTE_YOUR_API_KEY_HERE",
-  // authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
-  // projectId: "PASTE_YOUR_PROJECT_ID_HERE",
-  // storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
-  // messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
-  // appId: "PASTE_YOUR_APP_ID_HERE"
+  // apiKey: "AIzaSyAxJ_Fy06wa8jRZOtOOZg365r1ve84Ri64",
+  // authDomain: "ledgerlite-83792.firebaseapp.com",
+  // projectId: "ledgerlite-83792",
+  // storageBucket: "ledgerlite-83792.firebasestorage.app",
+  // messagingSenderId: "77470769911",
+  // appId: "1:77470769911:web:698f3e91d48939e66429f2"
 };
 
 
