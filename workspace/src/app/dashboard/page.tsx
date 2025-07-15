@@ -5,7 +5,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
-import { getFirebaseDb } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { collection, addDoc, getDocs, updateDoc, deleteDoc, doc, query, where, orderBy, Timestamp } from "firebase/firestore";
 import { useCollection } from "react-firebase-hooks/firestore";
 
@@ -35,7 +35,6 @@ export default function DashboardPage() {
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
-    const db = getFirebaseDb();
 
     const transactionsRef = user ? collection(db, "users", user.uid, "transactions") : null;
     const [transactionsSnapshot, loading, error] = useCollection(transactionsRef ? query(transactionsRef, orderBy("date", "desc")) : null);
@@ -115,7 +114,7 @@ export default function DashboardPage() {
             }
             setIsSheetOpen(false);
             setEditingTransaction(null);
-        } catch (error: any) {
+        } catch (error: any)_ {
             toast({ variant: "destructive", title: "Error", description: error.message });
         }
     };

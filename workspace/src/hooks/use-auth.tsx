@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { 
     onAuthStateChanged, 
     createUserWithEmailAndPassword, 
@@ -41,8 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    const db = getFirebaseDb();
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
         if (firebaseUser) {
             const userDocRef = doc(db, "users", firebaseUser.uid);
@@ -62,14 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (phone: string, password?: string) => {
-    const auth = getFirebaseAuth();
     if (!password) throw new Error("Password is required.");
     await signInWithEmailAndPassword(auth, formatEmail(phone), password);
   };
 
   const signup = async (phone: string, password?: string) => {
-    const auth = getFirebaseAuth();
-    const db = getFirebaseDb();
     if (!password) throw new Error("Password is required.");
     const userCredential = await createUserWithEmailAndPassword(auth, formatEmail(phone), password);
     const firebaseUser = userCredential.user;
@@ -87,7 +82,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
-    const auth = getFirebaseAuth();
     await signOut(auth);
     setUser(null);
   };
